@@ -13,10 +13,20 @@ def load_data(filename):
     f.close()
     return [training_data, validation_data, test_data]
 
+
+def dense_to_one_hot(labels_dense, num_classes):
+  """Convert class labels from scalars to one-hot vectors."""
+  num_labels = labels_dense.shape[0]
+  index_offset = np.arange(num_labels) * num_classes
+  labels_one_hot = np.zeros((num_labels, num_classes))
+  labels_one_hot.flat[index_offset + labels_dense.ravel()] = 1
+  return labels_one_hot
+
+
 class DataSet():
     def __init__(self, data):
-        self._images = data[0]
-        self._labels = data[1]
+        self._images = np.reshape(data[0], (-1, 28, 28, 1))
+        self._labels = dense_to_one_hot(np.array(data[1]), 10)
         self.data_length = len(self._images)
         self.cursor = 0
 

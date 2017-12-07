@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import tensorflow as tf
+from data.mnist import Mnist
 
 import math
 from tensorflow.examples.tutorials.mnist import input_data as mnist_data
@@ -21,7 +22,8 @@ print("Tensorflow version " + tf.__version__)
 tf.set_random_seed(0.0)
 
 # Download images and labels into mnist.test (10K images+labels) and mnist.train (60K images+labels)
-mnist = mnist_data.read_data_sets("data", one_hot=True, reshape=False, validation_size=0)
+#mnist = mnist_data.read_data_sets("data", one_hot=True, reshape=False, validation_size=0)
+mnist = Mnist()
 
 # neural network structure for this sample:
 #
@@ -141,7 +143,7 @@ sess.run(init)
 
 
 # You can call this function in a loop to train the model, 100 images at a time
-for i in range(10000):
+for i in range(5000):
 
     # training on batches of 100 images with 100 labels
     batch_X, batch_Y = mnist.train.next_batch(100)
