@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import pytest
 
+from imageprocess.affinedistortion import affine_distort
 from preprocess import strip_label, draw_greyscale_digit, preprocess_data, preprocess_single_data, rescale_image
 from loadmodeltest import Evaluator
 from imageprocess.elasticdistortion import elastic_transform
@@ -64,13 +65,32 @@ def test_elastic_distortion(test_dict):
     images_2d = [value[0].reshape(28, 28) if value[0] is not None else np.zeros((28, 28)) for value in
                  test_dict.values()]
     for image in images_2d:
-        distorted = elastic_transform(image, alpha=8, sigma=3)
+        distorted = elastic_transform(image, alpha=20, sigma=4)
 
         shape1 = image.shape
         shape2 = distorted.shape
         combined = np.zeros((shape1[0], shape1[1] + shape2[1]), np.float32)
         combined[:,:shape1[1]] = image
         combined[:,shape1[1]:] = distorted
+
+        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('image', 100, 100)
+        cv2.imshow('image', combined)
+        cv2.waitKey()
+        cv2.destroyAllWindows()
+
+
+def test_affine_distortion(test_dict):
+    images_2d = [value[0].reshape(28, 28) if value[0] is not None else np.zeros((28, 28)) for value in
+                 test_dict.values()]
+    for image in images_2d:
+        distorted = affine_distort(image)
+
+        shape1 = image.shape
+        shape2 = distorted.shape
+        combined = np.zeros((shape1[0], shape1[1] + shape2[1]), np.float32)
+        combined[:, :shape1[1]] = image
+        combined[:shape2[0], shape1[1]:] = distorted
 
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         cv2.resizeWindow('image', 100, 100)
