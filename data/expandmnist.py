@@ -1,62 +1,56 @@
-from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
+"""expand_mnist.py
+~~~~~~~~~~~~~~~~~~
 
+Take the 50,000 MNIST training images, and create an expanded set of
+250,000 images, by displacing each training image up, down, left and
+right, by one pixel.  Save the resulting file to
+../data/mnist_expanded.pkl.gz.
 
-def read_data_sets(train_dir,
-                   fake_data=False,
-                   one_hot=False,
-                   dtype=dtypes.float32,
-                   reshape=True,
-                   validation_size=5000,
-                   seed=None):
-    if fake_data:
-        def fake():
-            return DataSet(
-                [], [], fake_data=True, one_hot=one_hot, dtype=dtype, seed=seed)
+Note that this program is memory intensive, and may not run on small
+systems.
 
-        train = fake()
-        validation = fake()
-        test = fake()
-        return base.Datasets(train=train, validation=validation, test=test)
+"""
 
-    TRAIN_IMAGES = 'train-images-idx3-ubyte.gz'
-    TRAIN_LABELS = 'train-labels-idx1-ubyte.gz'
-    TEST_IMAGES = 't10k-images-idx3-ubyte.gz'
-    TEST_LABELS = 't10k-labels-idx1-ubyte.gz'
+from __future__ import print_function
 
-    local_file = base.maybe_download(TRAIN_IMAGES, train_dir,
-                                     SOURCE_URL + TRAIN_IMAGES)
-    with open(local_file, 'rb') as f:
-        train_images = extract_images(f)
+#### Libraries
 
-    local_file = base.maybe_download(TRAIN_LABELS, train_dir,
-                                     SOURCE_URL + TRAIN_LABELS)
-    with open(local_file, 'rb') as f:
-        train_labels = extract_labels(f, one_hot=one_hot)
+# Standard library
+import pickle
+import gzip
+import os.path
+import random
 
-    local_file = base.maybe_download(TEST_IMAGES, train_dir,
-                                     SOURCE_URL + TEST_IMAGES)
-    with open(local_file, 'rb') as f:
-        test_images = extract_images(f)
+# Third-party libraries
+import numpy as np
 
-    local_file = base.maybe_download(TEST_LABELS, train_dir,
-                                     SOURCE_URL + TEST_LABELS)
-    with open(local_file, 'rb') as f:
-        test_labels = extract_labels(f, one_hot=one_hot)
+from imageprocess.elasticdistortion import elastic_transform
 
-    if not 0 <= validation_size <= len(train_images):
-        raise ValueError(
-            'Validation size should be between 0 and {}. Received: {}.'
-                .format(len(train_images), validation_size))
+print("Expanding the MNIST training set")
 
-    validation_images = train_images[:validation_size]
-    validation_labels = train_labels[:validation_size]
-    train_images = train_images[validation_size:]
-    train_labels = train_labels[validation_size:]
+dir_name = os.path.dirname(__file__)
 
-    options = dict(dtype=dtype, reshape=reshape, seed=seed)
-
-    train = DataSet(train_images, train_labels, **options)
-    validation = DataSet(validation_images, validation_labels, **options)
-    test = DataSet(test_images, test_labels, **options)
-
-    return base.Datasets(train=train, validation=validation, test=test)
+if os.path.exists(dir_name+"/mnist_expanded.pkl.gz"):
+    print("The expanded training set already exists.  Exiting.")
+else:
+    f = gzip.open(dir_name+"/mnist.pkl.gz", 'rb')
+    training_data, validation_data, test_data = pickle.load(f, encoding='latin1')
+    f.close()
+    expanded_training_pairs = []
+    j = 0 # counter
+    for x, y in zip(training_data[0], training_data[1]):
+        expanded_training_pairs.append((x, y))
+        image = np.reshape(x, (-1, 28))
+        j += 1
+        if j % 1000 == 0: print("Expanding image number", j)
+        # iterate over data telling us the details of how to
+        # do the displacement
+        for i in range(4):
+            new_img = elastic_transform(image, alpha=20, sigma=4)
+            expanded_training_pairs.append((np.reshape(new_img, 784), y))
+    random.shuffle(expanded_training_pairs)
+    expanded_training_data = [list(d) for d in zip(*expanded_training_pairs)]
+    print("Saving expanded data. This may take a few minutes.")
+    f = gzip.open(dir_name+"/mnist_expanded.pkl.gz", "w")
+    pickle.dump((expanded_training_data, validation_data, test_data), f)
+    f.close()
